@@ -11,9 +11,8 @@ import sys
 
 class Game(object):
     
-    game_status = 'menu'
     default_color = (0, 0, 0, 255)
-    game_level = 'normal'
+    highlight_color = (200, 30, 30, 255)
     
     def __init__(self, prac_len = 20, level = 'Normal'):
 
@@ -152,13 +151,6 @@ class Menu(cocos.layer.Layer):
             if self.game.status == 'menu':
                 self.visible = True
 
-
-
-    def get_name(self):
-        
-        _ = self.name
-
-        return _
         
 
 class Main_screen(cocos.layer.Layer):
@@ -171,21 +163,8 @@ class Main_screen(cocos.layer.Layer):
 
         super(Main_screen, self).__init__()
 
-        self.start_timer = 0
-        self.time_passed = 0
-        self.game_started = False
-
-        self.default_color = (0, 0, 0, 255)
         
-        self.schedule(self.Timer_Refresh)
-
-        self.keys_pressed = set()
-        self.visible = False
-        self.game = game
-
-        #self.prac_len = menu.prac_len
-        #self.level = menu.level
-
+        self.default_color = (0, 0, 0, 255)
         self.image = pyglet.resource.image('main_screen.png')
         print('main screen initialised')
         Game.show_highscore(self)
@@ -196,7 +175,6 @@ class Main_screen(cocos.layer.Layer):
             bold = False, 
             color = self.default_color, 
             x = 345, y = 175)
-
         self.add(self.Time_Label)
 
         self.BestTime_Label = cocos.text.Label('99:59',
@@ -205,9 +183,7 @@ class Main_screen(cocos.layer.Layer):
             bold = False, 
             color = self.default_color, 
             x = 585, y = 173)
-    
         self.add(self.BestTime_Label)
-
 
         self.prac_label = cocos.text.Label('GET READY 3',
             font_size = 32,
@@ -215,7 +191,6 @@ class Main_screen(cocos.layer.Layer):
             bold = False, 
             color = self.default_color, 
             x = 155, y = 375)
-    
         self.add(self.prac_label)
 
         self.input_label = cocos.text.Label('',
@@ -224,10 +199,25 @@ class Main_screen(cocos.layer.Layer):
             bold = False, 
             color = self.default_color, 
             x = 135, y = 240)
-    
         self.add(self.input_label)
 
+        self.game_init()
 
+        
+        self.start_timer = 0
+        self.schedule(self.Timer_Refresh)
+
+        self.keys_pressed = set()
+        self.visible = False
+        self.game = game
+
+
+    
+    def game_init(self):
+
+        self.time_passed = 0
+        self.game_started = False
+        self.input_label.element.text = ''
 
     def draw(self):
 
@@ -247,27 +237,29 @@ class Main_screen(cocos.layer.Layer):
                 self.visible = False
                 self.keys_pressed.pop()
                 self.game.status = 'menu'
-                self.time_passed =0
-                self.game_started = False
-                self.input_label.element.text = ''
+                self.game_init()
+            elif 'BACKSPACE' in key_names:
+                _str = self.input_label.element.text
+                self.input_label.element.text = _str[:len(_str) - 1]
             elif 'ENTER' in key_names and self.game_started:
                 if self.input_label.element.text == self.prac_label.element.text:
                     print('bingo!')
                 else:
                     print('you failed')
-                self.game_started = False
-                self.time_passed = 0
-                self.input_label.element.text = ''
+                self.game_init()
 
             elif self.game_started and len(self.input_label.element.text) < self.game.prac_len:
-                if len(key_names) > 1 and (key_names[0] == 'LSHIFT') and (key_names[1] in _str):
-                    self.input_label.element.text += key_names[1]
+                print('main screen key pressed', key_names)
+                if len(key_names) > 1 and ('LSHIFT' in key_names) and (key_names[1] in _str or key_names[0] in _str):
+                    if key_names[0] in _str:
+                        self.input_label.element.text += key_names[0]
+                    else:
+                        self.input_label.element.text += key_names[1]
                 elif len(key_names) == 1 and (key_names[0] in _str):
                     self.input_label.element.text += key_names[0].lower()
     
 
     def on_key_release(self, key, modifiers):
-        print('main key release', len(self.keys_pressed), key)
         if self.game.status == 'main' and len(self.keys_pressed) > 0:
             self.keys_pressed.remove(key)
 
