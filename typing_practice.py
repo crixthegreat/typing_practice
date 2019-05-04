@@ -74,9 +74,11 @@ class Menu(cocos.layer.Layer):
 
         key_names = [pyglet.window.key.symbol_string(k) for k in self.keys_pressed]
 
+        print('menu keys: ',key_names)       
         if 'ENTER' in key_names:
             print('menu pressed Enter')
             self.visible = False
+            self.keys_pressed.pop()
             self.game.status = 'main'
         elif 'LEFT' in key_names:
             if self.game.level != 'Normal':
@@ -89,13 +91,54 @@ class Menu(cocos.layer.Layer):
 
 
     def on_key_press(self, key, modifiers):
-        
-        if Game.game_status == 'menu':
+        if self.game.status == 'menu':
             self.keys_pressed.add(key)
             self.do_actions()
+
+    def on_key_release(self, key, modifiers):
+
+        if self.game.status == 'menu' and len(self.keys_pressed) > 0:
             self.keys_pressed.remove(key)
 
 
+    def Timer_Refresh(self, dt):
+        """A simple on_time event
+        dt means the time passed after the last event
+        use the StartTimer and 'dt' to set the time interval
+        use the TimePassed the calculate the time passed of the game
+        """
+        self.start_timer += dt
+        self.time_passed += dt
+        if self.start_timer > 1:  # timer_interval
+            if self.game.status == 'main':
+                self.start_timer = 0
+                self.Time_Label.element.text = str(int(self.time_passed // 60)) + ' : ' + str(int(self.time_passed % 60)) 
+                self.visible = True
+                if int(self.time_passed) <4 and self.game_started == False:
+                    self.prac_label.element.text = 'GET READY ' + str(int(3 - self.time_passed))
+                else:
+                    if self.game_started == False:
+                        self.time_passed = 0
+                        _str = []
+                        if self.game.level == 'Normal':
+                            print('Normal game started')
+                            for _ in range(self.game.prac_len):
+                                _str.append(chr(random.randint(97,122))) 
+                            random.shuffle(_str)
+                            _str = ''.join(_str)
+                        elif self.game.level == 'Hard':
+                            print('Hard game started')
+                            for _ in range(26):
+                                _str.append(chr(97 + _))
+                                _str.append(chr(65 + _))
+                            random.shuffle(_str)
+                            _str = _str[:self.game.prac_len]
+                            _str = ''.join(_str)
+                        else:
+                            print('unknown game level')
+                            sys.exit()
+
+                        self.prac_label.element.text = _str 
     def Timer_Refresh(self, dt):
         """A simple on_time event
         dt means the time passed after the last event
@@ -175,7 +218,7 @@ class Main_screen(cocos.layer.Layer):
     
         self.add(self.prac_label)
 
-        self.input_label = cocos.text.Label('>>>',
+        self.input_label = cocos.text.Label('',
             font_size = 32,
             font_name = 'Verdana', 
             bold = False, 
@@ -193,20 +236,39 @@ class Main_screen(cocos.layer.Layer):
 
     def on_key_press(self, key, modifiers):
         
-        _str='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
+        _str='ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
         if self.game.status == 'main':
             self.keys_pressed.add(key)
             key_names = [pyglet.window.key.symbol_string(k) for k in self.keys_pressed]
 
             if 'SPACE' in key_names:
-                print('Main_screen pressed Enter')
+                print('Main_screen pressed SPACE')
                 self.visible = False
+                self.keys_pressed.pop()
                 self.game.status = 'menu'
+                self.time_passed =0
                 self.game_started = False
-            elif self.game_started and (key_names[0] in _str) and len(self.input_label.element.text) < self.game.prac_len:
-                self.input_label.element.text += key_names[0]
+                self.input_label.element.text = ''
+            elif 'ENTER' in key_names and self.game_started:
+                if self.input_label.element.text == self.prac_label.element.text:
+                    print('bingo!')
+                else:
+                    print('you failed')
+                self.game_started = False
+                self.time_passed = 0
+                self.input_label.element.text = ''
 
+            elif self.game_started and len(self.input_label.element.text) < self.game.prac_len:
+                if len(key_names) > 1 and (key_names[0] == 'LSHIFT') and (key_names[1] in _str):
+                    self.input_label.element.text += key_names[1]
+                elif len(key_names) == 1 and (key_names[0] in _str):
+                    self.input_label.element.text += key_names[0].lower()
+    
+
+    def on_key_release(self, key, modifiers):
+        print('main key release', len(self.keys_pressed), key)
+        if self.game.status == 'main' and len(self.keys_pressed) > 0:
             self.keys_pressed.remove(key)
 
 
