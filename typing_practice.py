@@ -296,6 +296,7 @@ class Main_screen(cocos.layer.Layer):
     
     def game_init(self):
 
+        self.game_time = 0
         self.time_passed = 0
         self.game_started = False
         self.input_label.element.text = ''
@@ -331,14 +332,14 @@ class Main_screen(cocos.layer.Layer):
                     else:
                         print('bingo!')
                         if self.time_passed <= self.game.get_highscore():
+                            self.game_time = self.time_passed
                             self.prac_label.element.text = 'HIGH SCORE! NAME:'
                             self.input_label.element.text = self.game.name
                             self.game.status = 'highscore'
                             print('now game changes into ' + self.game.status + ' mode')
                 elif self.game.status == 'highscore':
                     self.game.name = self.input_label.element.text
-                    self.game.write_highscore(self.game.name, int(self.time_passed))
-                    print('highscore saved', self.game.name, self.time_passed)
+                    self.game.write_highscore(self.game.name, int(self.game_time))
                     self.game.status = 'main'
                     self.game.show_highscore()
                     self.game_init()
