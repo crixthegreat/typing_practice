@@ -50,21 +50,21 @@ class Game(object):
             else:
                 print('wrong game level')
 
+    def refresh_highscore(self, normal_highscore_label, hard_highscore_label):
+        _data = self.show_highscore()
+        for _ in range(5):
+            normal_highscore_label[_].element.text = _data[_][1] + ' ' * (10 - len(_data[_][1])) + str(_data[_][0] // 60) + ':' + str(_data[_][0] % 60) 
+        for _ in range(5):
+            hard_highscore_label[_].element.text = _data[5 + _][1] + ' ' * (10 - len(_data[5 + _][1])) + str(_data[5 + _][0] // 60) + ':' + str(_data[5 + _][0] % 60) 
+
     def show_highscore(self):
 
-        print(Game.highscore_file)
         with open(Game.highscore_file) as _file:
             try:
                 _data = json.load(_file)
             except:
                 print('open file failed')
-
-            data_normal = sorted(_data[0:5])
-            data_hard = sorted(_data[5:])
-            
-            print('showing the record')
-            print(data_normal)
-            print(data_hard)
+            return _data
 
     def write_highscore(self, name, highscore):
         with open(Game.highscore_file) as _file:
@@ -83,7 +83,7 @@ class Game(object):
             else:
                 print('wrong game level')
 
-            _ = _ + [[highscore, name]]
+            _ = _ + [[highscore, name[:10]]]
             print(' _ before sorted', _)
             _ = sorted(_)
             print(' _ after sorted', _)
@@ -123,7 +123,31 @@ class Menu(cocos.layer.Layer):
         
         self.image = pyglet.resource.image('menu.png')
         print('menu initialised')
-        Game.show_highscore(self)
+
+        _data = self.game.show_highscore()
+        print('_data = ', _data)
+        self.normal_highscore_label = []
+        self.hard_highscore_label = []
+
+        for _ in range(5):
+            print('normal', _)
+            self.normal_highscore_label.append(cocos.text.Label(_data[_][1] + ' ' * (10 - len(_data[_][1])) + str(_data[_][0] // 60) + ':' + str(_data[_][0] % 60), 
+               font_size = 16, 
+               font_name = 'Verdana', 
+               bold = False, 
+               color = Game.default_color, 
+               x = 220, y = 110 - (_ * 25)))
+            self.add(self.normal_highscore_label[_])
+
+        for _ in range(5):
+            print('hard', _)
+            self.hard_highscore_label.append(cocos.text.Label(_data[5 + _][1] + ' ' * (10 - len(_data[5 + _][1])) + str(_data[5 + _][0] // 60) + ':' + str(_data[5 + _][0] % 60), 
+               font_size = 16, 
+               font_name = 'Verdana', 
+               bold = False, 
+               color = Game.default_color, 
+               x = 450, y = 110 - (_ * 25)))
+            self.add(self.hard_highscore_label[_])
 
         self.level_label = cocos.text.Label(self.game.level,
             font_size = 26,
@@ -133,7 +157,6 @@ class Menu(cocos.layer.Layer):
             x = 455, y = 240)
 
         self.add(self.level_label)
-
 
 
     def draw(self):
@@ -183,7 +206,7 @@ class Menu(cocos.layer.Layer):
             self.StartTimer = 0
             if self.game.status == 'menu':
                 self.visible = True
-
+                self.game.refresh_highscore(self.normal_highscore_label, self.hard_highscore_label)
         
 
 class Main_screen(cocos.layer.Layer):
@@ -196,18 +219,17 @@ class Main_screen(cocos.layer.Layer):
 
         super(Main_screen, self).__init__()
 
-        
+        self.game = game
         self.default_color = (0, 0, 0, 255)
         self.image = pyglet.resource.image('main_screen.png')
         print('main screen initialised')
-        Game.show_highscore(self)
-
+        
         self.Time_Label = cocos.text.Label('00:00',
             font_size = 16,
             font_name = 'Verdana', 
             bold = False, 
             color = self.default_color, 
-            x = 345, y = 175)
+            x = 165, y = 205)
         self.add(self.Time_Label)
 
         self.BestTime_Label = cocos.text.Label('99:59',
@@ -215,7 +237,7 @@ class Main_screen(cocos.layer.Layer):
             font_name = 'Verdana', 
             bold = False, 
             color = self.default_color, 
-            x = 585, y = 173)
+            x = 555, y = 205)
         self.add(self.BestTime_Label)
 
         self.prac_label = cocos.text.Label('GET READY 3',
@@ -223,7 +245,7 @@ class Main_screen(cocos.layer.Layer):
             font_name = 'Verdana', 
             bold = False, 
             color = self.default_color, 
-            x = 155, y = 375)
+            x = 155, y = 395)
         self.add(self.prac_label)
 
         self.input_label = cocos.text.Label('',
@@ -231,8 +253,34 @@ class Main_screen(cocos.layer.Layer):
             font_name = 'Verdana', 
             bold = False, 
             color = self.default_color, 
-            x = 135, y = 240)
+            x = 135, y = 260)
         self.add(self.input_label)
+
+        _data = self.game.show_highscore()
+        print('_data = ', _data)
+        self.normal_highscore_label = []
+        self.hard_highscore_label = []
+
+        for _ in range(5):
+            print('normal', _)
+            self.normal_highscore_label.append(cocos.text.Label(_data[_][1] + ' ' * (10 - len(_data[_][1])) + str(_data[_][0] // 60) + ':' + str(_data[_][0] % 60), 
+               font_size = 16, 
+               font_name = 'Verdana', 
+               bold = False, 
+               color = Game.default_color, 
+               x = 220, y = 110 - (_ * 25)))
+            self.add(self.normal_highscore_label[_])
+
+        for _ in range(5):
+            print('hard', _)
+            self.hard_highscore_label.append(cocos.text.Label(_data[5 + _][1] + ' ' * (10 - len(_data[5 + _][1])) + str(_data[5 + _][0] // 60) + ':' + str(_data[5 + _][0] % 60), 
+               font_size = 16, 
+               font_name = 'Verdana', 
+               bold = False, 
+               color = Game.default_color, 
+               x = 450, y = 110 - (_ * 25)))
+            self.add(self.hard_highscore_label[_])
+
 
         self.game_init()
 
@@ -325,6 +373,7 @@ class Main_screen(cocos.layer.Layer):
                 self.start_timer = 0
                 self.Time_Label.element.text = str(int(self.time_passed // 60)) + ' : ' + str(int(self.time_passed % 60)) 
                 self.visible = True
+                self.game.refresh_highscore(self.normal_highscore_label, self.hard_highscore_label)
 
                 # count down SFX    
                 if int(self.time_passed) <4 and self.game_started == False:
@@ -353,20 +402,6 @@ class Main_screen(cocos.layer.Layer):
 
                         self.prac_label.element.text = _str 
                         self.game_started = True
-
-
-class High_score(Game):
-
-
-    def get_input(self, name, score):
-        pass
-
-    def show_score(self):
-        pass
-
-    def write_score(self, name, score):
-        pass
-
 
 
 if __name__ == '__main__':
