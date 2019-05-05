@@ -2,4 +2,11 @@
 
 a little typing practice game for Judy, with features below:
 
-- recore high scores (time) into a file （WIP）
+- normal & hard mode (mixed with lower case and upper case)
+- recore high scores (shortest time) into a file 
+
+
+to do
+
+- graphs to show the high score
+- interface fix
