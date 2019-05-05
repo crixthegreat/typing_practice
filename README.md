@@ -8,5 +8,8 @@ a little typing practice game for Judy, with features below:
 
 to do
 
-- graphs to show the high score
-- interface fix
+- nothing
+but
+
+- code clean
+- add comments
