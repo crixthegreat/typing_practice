@@ -8,31 +8,102 @@ import random
 import cocos
 import pyglet
 import sys
+import json
 
 class Game(object):
     
     default_color = (0, 0, 0, 255)
     highlight_color = (200, 30, 30, 255)
+    highscore_file = 'highscore.tp'
     
-    def __init__(self, prac_len = 20, level = 'Normal'):
+    def __init__(self, prac_len = 20, level = 'Normal', name = 'Judy'):
 
         self.level = level
         self.prac_len = prac_len
         self.game_init()
         self.status = 'menu'
+        self.name = name
 
     def game_init(self):
 
         print('game initialising...')
         pass
 
-    @staticmethod
-    def show_highscore(tLayer):
-        pass
+    def get_highscore(self):
+        """get the fifth high score from the record file
 
-    @staticmethod
-    def write_highscore():
-        pass
+        """
+
+
+        with open(Game.highscore_file) as _file:
+            try:
+                _data = json.load(_file)
+            except:
+                print('open file failed')
+
+            data_normal = sorted(_data[0:5])
+            data_hard = sorted(_data[5:])
+            if self.level == 'Normal':
+                return data_normal[4][0]
+            elif self.level == 'Hard':
+                return data_hard[4][0]
+            else:
+                print('wrong game level')
+
+    def show_highscore(self):
+
+        print(Game.highscore_file)
+        with open(Game.highscore_file) as _file:
+            try:
+                _data = json.load(_file)
+            except:
+                print('open file failed')
+
+            data_normal = sorted(_data[0:5])
+            data_hard = sorted(_data[5:])
+            
+            print('showing the record')
+            print(data_normal)
+            print(data_hard)
+
+    def write_highscore(self, name, highscore):
+        with open(Game.highscore_file) as _file:
+            try:
+                _data = json.load(_file)
+            except:
+                print('open file failed')
+
+            data_normal = sorted(_data[0:5])
+            data_hard = sorted(_data[5:])
+            
+            if self.level == 'Normal':
+                _ = data_normal
+            elif self.level == 'Hard':
+                _ = data_hard
+            else:
+                print('wrong game level')
+
+            _ = _ + [[highscore, name]]
+            print(' _ before sorted', _)
+            _ = sorted(_)
+            print(' _ after sorted', _)
+            _ = _[:5]
+            print(' _ after trimed', _)
+
+            if self.level == 'Normal':
+                _data = _ + data_hard
+            elif self.level == 'Hard':
+                _data = data_normal + _
+
+            print(_, _data)
+
+        with open(Game.highscore_file, 'w') as _file:
+            try:
+                json.dump(_data, _file)
+            except:
+                print('write file failed')
+        
+
 
 class Menu(cocos.layer.Layer):
 
@@ -100,44 +171,6 @@ class Menu(cocos.layer.Layer):
             self.keys_pressed.remove(key)
 
 
-    def Timer_Refresh(self, dt):
-        """A simple on_time event
-        dt means the time passed after the last event
-        use the StartTimer and 'dt' to set the time interval
-        use the TimePassed the calculate the time passed of the game
-        """
-        self.start_timer += dt
-        self.time_passed += dt
-        if self.start_timer > 1:  # timer_interval
-            if self.game.status == 'main':
-                self.start_timer = 0
-                self.Time_Label.element.text = str(int(self.time_passed // 60)) + ' : ' + str(int(self.time_passed % 60)) 
-                self.visible = True
-                if int(self.time_passed) <4 and self.game_started == False:
-                    self.prac_label.element.text = 'GET READY ' + str(int(3 - self.time_passed))
-                else:
-                    if self.game_started == False:
-                        self.time_passed = 0
-                        _str = []
-                        if self.game.level == 'Normal':
-                            print('Normal game started')
-                            for _ in range(self.game.prac_len):
-                                _str.append(chr(random.randint(97,122))) 
-                            random.shuffle(_str)
-                            _str = ''.join(_str)
-                        elif self.game.level == 'Hard':
-                            print('Hard game started')
-                            for _ in range(26):
-                                _str.append(chr(97 + _))
-                                _str.append(chr(65 + _))
-                            random.shuffle(_str)
-                            _str = _str[:self.game.prac_len]
-                            _str = ''.join(_str)
-                        else:
-                            print('unknown game level')
-                            sys.exit()
-
-                        self.prac_label.element.text = _str 
     def Timer_Refresh(self, dt):
         """A simple on_time event
         dt means the time passed after the last event
@@ -228,7 +261,7 @@ class Main_screen(cocos.layer.Layer):
         
         _str='ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
-        if self.game.status == 'main':
+        if self.game.status == 'main' or self.game.status == 'highscore':
             self.keys_pressed.add(key)
             key_names = [pyglet.window.key.symbol_string(k) for k in self.keys_pressed]
 
@@ -241,12 +274,26 @@ class Main_screen(cocos.layer.Layer):
             elif 'BACKSPACE' in key_names:
                 _str = self.input_label.element.text
                 self.input_label.element.text = _str[:len(_str) - 1]
-            elif 'ENTER' in key_names and self.game_started:
-                if self.input_label.element.text == self.prac_label.element.text:
-                    print('bingo!')
-                else:
-                    print('you failed')
-                self.game_init()
+            elif 'ENTER' in key_names:
+                if self.game.status == 'main' and self.game_started:
+                    if self.input_label.element.text != self.prac_label.element.text:
+                        print('the game mode is: ' + self.game.status)
+                        print('you failed')
+                        self.game_init()
+                    else:
+                        print('bingo!')
+                        if self.time_passed <= self.game.get_highscore():
+                            self.prac_label.element.text = 'HIGH SCORE! NAME:'
+                            self.input_label.element.text = self.game.name
+                            self.game.status = 'highscore'
+                            print('now game changes into ' + self.game.status + ' mode')
+                elif self.game.status == 'highscore':
+                    self.game.name = self.input_label.element.text
+                    self.game.write_highscore(self.game.name, int(self.time_passed))
+                    print('highscore saved', self.game.name, self.time_passed)
+                    self.game.status = 'main'
+                    self.game.show_highscore()
+                    self.game_init()
 
             elif self.game_started and len(self.input_label.element.text) < self.game.prac_len:
                 print('main screen key pressed', key_names)
@@ -257,10 +304,10 @@ class Main_screen(cocos.layer.Layer):
                         self.input_label.element.text += key_names[1]
                 elif len(key_names) == 1 and (key_names[0] in _str):
                     self.input_label.element.text += key_names[0].lower()
-    
+
 
     def on_key_release(self, key, modifiers):
-        if self.game.status == 'main' and len(self.keys_pressed) > 0:
+        if (self.game.status == 'main' or self.game.status == 'highscore')and len(self.keys_pressed) > 0:
             self.keys_pressed.remove(key)
 
 
@@ -272,11 +319,14 @@ class Main_screen(cocos.layer.Layer):
         """
         self.start_timer += dt
         self.time_passed += dt
+
         if self.start_timer > 1:  # timer_interval
             if self.game.status == 'main':
                 self.start_timer = 0
                 self.Time_Label.element.text = str(int(self.time_passed // 60)) + ' : ' + str(int(self.time_passed % 60)) 
                 self.visible = True
+
+                # count down SFX    
                 if int(self.time_passed) <4 and self.game_started == False:
                     self.prac_label.element.text = 'GET READY ' + str(int(3 - self.time_passed))
                 else:
