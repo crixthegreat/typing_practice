@@ -8,8 +8,8 @@ a little typing practice game for Judy, with features below:
 
 to do
 
-- nothing
-but
+nothing but
 
+- minor bug fix
 - code clean
 - add comments
