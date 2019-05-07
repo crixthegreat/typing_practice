@@ -9,32 +9,40 @@ import cocos
 import pyglet
 import sys
 import json
+import time
+import os
 
 class Game(object):
     
+
+
     default_color = (0, 0, 0, 255)
     highlight_color = (200, 30, 30, 255)
-    highscore_file = 'highscore.tp'
     
-    def __init__(self, prac_len = 20, level = 'Normal', name = 'Judy'):
+    highscore_file = 'highscore.tp'
 
+    def __init__(self, prac_len = 20, level = 'Normal', name = 'Judy'):
+        """game initialization
+        the game has three status:
+        1.menu; 2.Main 3.highscore
+        when in different status, the layers(menu and main_screen) has different actions triggered by keyboard events
+        """
         self.level = level
         self.prac_len = prac_len
         self.game_init()
         self.status = 'menu'
         self.name = name
 
+
     def game_init(self):
 
-        print('game initialising...')
+        #print('game initialising...')
         pass
 
     def get_highscore(self):
-        """get the fifth high score from the record file
-
+        """return the fifth high score from the record file
+            used to judge TOP5 or not
         """
-
-
         with open(Game.highscore_file) as _file:
             try:
                 _data = json.load(_file)
@@ -50,15 +58,36 @@ class Game(object):
             else:
                 print('wrong game level')
 
-    def refresh_highscore(self, normal_highscore_label, hard_highscore_label):
+    # add *args for the best_time_label to show the best time
+    def refresh_highscore(self, normal_highscore_label, hard_highscore_label, *args):
+        """show the TOP5 high score
+        
+        """
         _data = self.show_highscore()
         for _ in range(5):
             normal_highscore_label[_].element.text = _data[_][1] + ' ' * (10 - len(_data[_][1])) + str(_data[_][0] // 60) + ':' + str(_data[_][0] % 60) 
         for _ in range(5):
             hard_highscore_label[_].element.text = _data[5 + _][1] + ' ' * (10 - len(_data[5 + _][1])) + str(_data[5 + _][0] // 60) + ':' + str(_data[5 + _][0] % 60) 
+        
+        if len(args) > 0:
+            if self.level == 'Normal':
+                _data = _data[:5]
+            elif self.level == 'Hard':
+                _data = _data[5:]
+            else:
+                print('unknown game level')
+                sys.exit()
+
+            for _ in _data:
+                if _[1] == self.name:
+                    args[0].element.text = str(_[0] // 60) + ':' + str(_[0] % 60)
+                    break
+
 
     def show_highscore(self):
+        """load the record file and return _data
 
+        """
         with open(Game.highscore_file) as _file:
             try:
                 _data = json.load(_file)
@@ -66,7 +95,11 @@ class Game(object):
                 print('open file failed')
             return _data
 
+
     def write_highscore(self, name, highscore):
+        """write the name and highscore into the record file
+
+        """
         with open(Game.highscore_file) as _file:
             try:
                 _data = json.load(_file)
@@ -82,20 +115,18 @@ class Game(object):
                 _ = data_hard
             else:
                 print('wrong game level')
-
+            #trim the name below 10 chars
             _ = _ + [[highscore, name[:10]]]
-            print(' _ before sorted', _)
+            # _  sorted
             _ = sorted(_)
-            print(' _ after sorted', _)
+            # _ trimed into 5 items)
             _ = _[:5]
-            print(' _ after trimed', _)
-
+            # combine the Normal top5 and the Hard top5
             if self.level == 'Normal':
                 _data = _ + data_hard
             elif self.level == 'Hard':
                 _data = data_normal + _
 
-            print(_, _data)
 
         with open(Game.highscore_file, 'w') as _file:
             try:
@@ -112,25 +143,25 @@ class Menu(cocos.layer.Layer):
     def __init__(self, game):
 
 
+
         super(Menu, self).__init__()
         self.keys_pressed = set()
         
         self.game = game
         self.start_timer = 0
         self.time_passed = 0
-        self.schedule(self.Timer_Refresh)
+        self.schedule_interval(self.Timer_Refresh, 1)
+
+        self.image = pyglet.resource.image("menu.png")
 
         
-        self.image = pyglet.resource.image('menu.png')
-        print('menu initialised')
-
+        # initialise the highscore labels
         _data = self.game.show_highscore()
-        print('_data = ', _data)
         self.normal_highscore_label = []
         self.hard_highscore_label = []
 
         for _ in range(5):
-            print('normal', _)
+            #print('normal', _)
             self.normal_highscore_label.append(cocos.text.Label(_data[_][1] + ' ' * (10 - len(_data[_][1])) + str(_data[_][0] // 60) + ':' + str(_data[_][0] % 60), 
                font_size = 16, 
                font_name = 'Verdana', 
@@ -140,7 +171,7 @@ class Menu(cocos.layer.Layer):
             self.add(self.normal_highscore_label[_])
 
         for _ in range(5):
-            print('hard', _)
+            #print('hard', _)
             self.hard_highscore_label.append(cocos.text.Label(_data[5 + _][1] + ' ' * (10 - len(_data[5 + _][1])) + str(_data[5 + _][0] // 60) + ':' + str(_data[5 + _][0] % 60), 
                font_size = 16, 
                font_name = 'Verdana', 
@@ -155,23 +186,27 @@ class Menu(cocos.layer.Layer):
             bold = True, 
             color = Game.default_color, 
             x = 455, y = 240)
-
         self.add(self.level_label)
+
+
 
 
     def draw(self):
 
         self.image.blit(0,0)
 
+
     def do_actions(self):
 
         key_names = [pyglet.window.key.symbol_string(k) for k in self.keys_pressed]
 
-        print('menu keys: ',key_names)       
+        #print('menu keys: ',key_names)       
         if 'ENTER' in key_names:
-            print('menu pressed Enter')
+            #print('menu pressed Enter')
             self.visible = False
+            #pop the keys avoid the chaos of two layer's key events
             self.keys_pressed.pop()
+            #if the game is in status 'menu', press enter means game status changs into 'main' 
             self.game.status = 'main'
         elif 'LEFT' in key_names:
             if self.game.level != 'Normal':
@@ -200,17 +235,21 @@ class Menu(cocos.layer.Layer):
         use the StartTimer and 'dt' to set the time interval
         use the TimePassed the calculate the time passed of the game
         """
-        self.start_timer += dt
-        self.time_passed += dt
-        if self.start_timer > 1:  # timer_interval
-            self.StartTimer = 0
-            if self.game.status == 'menu':
-                self.visible = True
-                self.game.refresh_highscore(self.normal_highscore_label, self.hard_highscore_label)
-        
+        #self.start_timer += dt
+        #self.time_passed += dt
+        # the menu layer checks the game status every 1 second
+        #if self.start_timer > 1:  # timer_interval
+            #self.StartTimer = 0
+        if self.game.status == 'menu':
+            self.visible = True
+            self.game.refresh_highscore(self.normal_highscore_label, self.hard_highscore_label)
+
+
 
 class Main_screen(cocos.layer.Layer):
-    
+    """the main game screen
+
+    """
 
     is_event_handler = True
     
@@ -222,7 +261,6 @@ class Main_screen(cocos.layer.Layer):
         self.game = game
         self.default_color = (0, 0, 0, 255)
         self.image = pyglet.resource.image('main_screen.png')
-        print('main screen initialised')
         
         self.Time_Label = cocos.text.Label('00:00',
             font_size = 16,
@@ -232,20 +270,21 @@ class Main_screen(cocos.layer.Layer):
             x = 165, y = 205)
         self.add(self.Time_Label)
 
-        self.BestTime_Label = cocos.text.Label('99:59',
+        self.best_time_label = cocos.text.Label('99:59',
             font_size = 16,
             font_name = 'Verdana', 
             bold = False, 
             color = self.default_color, 
             x = 555, y = 205)
-        self.add(self.BestTime_Label)
-
+        self.add(self.best_time_label)
+        
+        # the practice strings label and the input label
         self.prac_label = cocos.text.Label('GET READY 3',
             font_size = 32,
             font_name = 'Verdana', 
             bold = False, 
             color = self.default_color, 
-            x = 155, y = 395)
+            x = 135, y = 395)
         self.add(self.prac_label)
 
         self.input_label = cocos.text.Label('',
@@ -257,12 +296,11 @@ class Main_screen(cocos.layer.Layer):
         self.add(self.input_label)
 
         _data = self.game.show_highscore()
-        print('_data = ', _data)
         self.normal_highscore_label = []
         self.hard_highscore_label = []
 
         for _ in range(5):
-            print('normal', _)
+            #print('normal', _)
             self.normal_highscore_label.append(cocos.text.Label(_data[_][1] + ' ' * (10 - len(_data[_][1])) + str(_data[_][0] // 60) + ':' + str(_data[_][0] % 60), 
                font_size = 16, 
                font_name = 'Verdana', 
@@ -272,7 +310,7 @@ class Main_screen(cocos.layer.Layer):
             self.add(self.normal_highscore_label[_])
 
         for _ in range(5):
-            print('hard', _)
+            #print('hard', _)
             self.hard_highscore_label.append(cocos.text.Label(_data[5 + _][1] + ' ' * (10 - len(_data[5 + _][1])) + str(_data[5 + _][0] // 60) + ':' + str(_data[5 + _][0] % 60), 
                font_size = 16, 
                font_name = 'Verdana', 
@@ -286,7 +324,9 @@ class Main_screen(cocos.layer.Layer):
 
         
         self.start_timer = 0
-        self.schedule(self.Timer_Refresh)
+
+        #the schedule method does it's job every second
+        self.schedule_interval(self.Timer_Refresh, 1)
 
         self.keys_pressed = set()
         self.visible = False
@@ -300,6 +340,7 @@ class Main_screen(cocos.layer.Layer):
         self.time_passed = 0
         self.game_started = False
         self.input_label.element.text = ''
+        #self.judge_label.element.text = ''
 
     def draw(self):
 
@@ -310,12 +351,14 @@ class Main_screen(cocos.layer.Layer):
         
         _str='ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
+        # the keyboard should be able to type when the game status is 'main' or 'highscore'(input the name)
         if self.game.status == 'main' or self.game.status == 'highscore':
+
             self.keys_pressed.add(key)
             key_names = [pyglet.window.key.symbol_string(k) for k in self.keys_pressed]
-
+            
+            # use the SPACE key to return to the menu
             if 'SPACE' in key_names:
-                print('Main_screen pressed SPACE')
                 self.visible = False
                 self.keys_pressed.pop()
                 self.game.status = 'menu'
@@ -326,17 +369,16 @@ class Main_screen(cocos.layer.Layer):
             elif 'ENTER' in key_names:
                 if self.game.status == 'main' and self.game_started:
                     if self.input_label.element.text != self.prac_label.element.text:
-                        print('the game mode is: ' + self.game.status)
-                        print('you failed')
+                        #print('you failed')
                         self.game_init()
                     else:
-                        print('bingo!')
+                        #print('bingo!')
                         if self.time_passed <= self.game.get_highscore():
                             self.game_time = self.time_passed
                             self.prac_label.element.text = 'HIGH SCORE! NAME:'
                             self.input_label.element.text = self.game.name
+                            #print('now game changes into ' + self.game.status + ' mode')
                             self.game.status = 'highscore'
-                            print('now game changes into ' + self.game.status + ' mode')
                 elif self.game.status == 'highscore':
                     self.game.name = self.input_label.element.text
                     self.game.write_highscore(self.game.name, int(self.game_time))
@@ -345,7 +387,7 @@ class Main_screen(cocos.layer.Layer):
                     self.game_init()
 
             elif self.game_started and len(self.input_label.element.text) < self.game.prac_len:
-                print('main screen key pressed', key_names)
+                #print('main screen key pressed', key_names)
                 if len(key_names) > 1 and ('LSHIFT' in key_names) and (key_names[1] in _str or key_names[0] in _str):
                     if key_names[0] in _str:
                         self.input_label.element.text += key_names[0]
@@ -366,57 +408,61 @@ class Main_screen(cocos.layer.Layer):
         use the StartTimer and 'dt' to set the time interval
         use the TimePassed the calculate the time passed of the game
         """
-        self.start_timer += dt
+        #self.start_timer += dt
         self.time_passed += dt
 
-        if self.start_timer > 1:  # timer_interval
-            if self.game.status == 'main':
-                self.start_timer = 0
-                self.Time_Label.element.text = str(int(self.time_passed // 60)) + ' : ' + str(int(self.time_passed % 60)) 
-                self.visible = True
-                self.game.refresh_highscore(self.normal_highscore_label, self.hard_highscore_label)
+    #if self.start_timer > 1:  # timer_interval
+        if self.game.status == 'main':
+            #self.start_timer = 0
+            self.Time_Label.element.text = str(int(self.time_passed // 60)) + ' : ' + str(int(self.time_passed % 60)) 
+            self.visible = True
+            self.game.refresh_highscore(self.normal_highscore_label, self.hard_highscore_label, self.best_time_label)
 
-                # count down SFX    
-                if int(self.time_passed) <4 and self.game_started == False:
-                    self.prac_label.element.text = 'GET READY ' + str(int(3 - self.time_passed))
-                else:
-                    if self.game_started == False:
-                        self.time_passed = 0
-                        _str = []
-                        if self.game.level == 'Normal':
-                            print('Normal game started')
-                            for _ in range(self.game.prac_len):
-                                _str.append(chr(random.randint(97,122))) 
-                            random.shuffle(_str)
-                            _str = ''.join(_str)
-                        elif self.game.level == 'Hard':
-                            print('Hard game started')
-                            for _ in range(26):
-                                _str.append(chr(97 + _))
-                                _str.append(chr(65 + _))
-                            random.shuffle(_str)
-                            _str = _str[:self.game.prac_len]
-                            _str = ''.join(_str)
-                        else:
-                            print('unknown game level')
-                            sys.exit()
+            # the count down SFX    
+            if int(self.time_passed) <4 and self.game_started == False:
+                self.prac_label.element.text = 'GET READY ' + str(int(3 - self.time_passed))
+            else:
+                if self.game_started == False:
+                    self.time_passed = 0
+                    # generate a string to be practiced
+                    _str = []
+                    if self.game.level == 'Normal':
+                        #print('Normal game started')
+                        for _ in range(self.game.prac_len):
+                            _str.append(chr(random.randint(97,122))) 
+                        random.shuffle(_str)
+                        _str = ''.join(_str)
+                    elif self.game.level == 'Hard':
+                        #print('Hard game started')
+                        for _ in range(26):
+                            _str.append(chr(97 + _))
+                            _str.append(chr(65 + _))
+                        random.shuffle(_str)
+                        _str = _str[:self.game.prac_len]
+                        _str = ''.join(_str)
+                    else:
+                        print('unknown game level')
+                        sys.exit()
 
-                        self.prac_label.element.text = _str 
-                        self.game_started = True
+                    self.prac_label.element.text = _str 
+                    self.game_started = True
 
 
 if __name__ == '__main__':
 
+    # change the working dir to the exe temp dir for the pyinstaller 
+    if getattr(sys, 'frozen', False):
+        os.chdir(sys._MEIPASS)
 
     cocos.director.director.init(width = 800, height = 600, caption = 'Typing practice game by Crix for Judy')
     my_game = Game()
     my_menu = Menu(my_game)
     my_screen = Main_screen(my_game)
     main_scene = cocos.scene.Scene(my_menu, my_screen)
-    print ('game initialised')
+    #print ('game initialised')
     cocos.director.director.run(main_scene)
 
-    print('game end')
+    #print('game end')
 
 
 
